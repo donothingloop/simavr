@@ -42,13 +42,15 @@ ARCH 		:= ${shell $(CC) -dumpmachine | sed -e 's/^x/i/' -e 's/\(.\).*/\1/'}
 CFLAGS		+= -O2 -Wall
 CFLAGS		+= -g
 CORE_CFLAGS	= -nostdinc -DAVR_CORE=1
+LIBELF_INC = `pkg-config --cflags-only-I libelf` 
 
 ifeq (${shell uname}, Darwin)
- # gcc 4.2 from MacOS is really not up to scratch anymore 
+ # gcc 4.2 from MacOS is really not up to scratch anymore, installing Arduino SDK solves it easily though
  CC			= clang
- AVR_ROOT 	:= "/Applications/Arduino.app/Contents/Resources/Java/hardware/tools/avr/"
+ AVR_ROOT 	:= "/Applications/Arduino.app/Contents/Java/hardware/tools/avr"
  AVR_INC 	:= ${AVR_ROOT}/avr/
  AVR 		:= ${AVR_ROOT}/bin/avr-
+
  # Thats for MacPorts libelf
  ifeq (${shell test -d /opt/local && echo Exists}, Exists)
   ifneq (${shell test -d /opt/local/avr && echo Exists}, Exists)
@@ -63,22 +65,22 @@ ifeq (${shell uname}, Darwin)
   AVR_INC 	:= /opt/local/avr
   AVR 		:= /opt/local/bin/avr-
  else
-  # That's for Homebrew libelf and avr-gcc support
-  HOMEBREW_PREFIX ?= /usr/local
-  ifeq (${shell test -d $(HOMEBREW_PREFIX)/Cellar && echo Exists}, Exists)
-   ifneq (${shell test -d $(HOMEBREW_PREFIX)/Cellar/avr-gcc/ && echo Exists}, Exists)
-    $(error Please install avr-gcc: brew tap osx-cross/homebrew-avr ; brew install avr-libc)
+  # That's for Arduino and avr-gcc support on OSX
+	ARDUINO_PREFIX?= /Applications/Arduino.app/Contents/Java/hardware/tools/avr
+	HOMEBREW_PREFIX? = /usr/local
+  ifeq (${shell test -d $(ARDUINO_PREFIX) && echo Exists}, Exists)
+   ifneq (${shell test -d $(ARDUINO_PREFIX) && echo Exists}, Exists)
+    $(error Please install Arduino UI and avr-gcc: brew cask install arduino)
    endif
-   ifneq (${shell test -d $(HOMEBREW_PREFIX)/Cellar/libelf/ && echo Exists}, Exists)
+   ifneq (${shell pkg-config --exists libelf && echo Exists}, Exists)
     $(error Please install libelf: brew install libelf)
    endif
    CC			= clang
    IPATH		+= $(HOMEBREW_PREFIX)/include
-   LFLAGS		= -L$(HOMEBREW_PREFIX)/lib/
-   CFLAGS		+= -I/$(HOMEBREW_PREFIX)/include/libelf
-   AVR_ROOT		:= $(firstword $(wildcard $(HOMEBREW_PREFIX)/Cellar/avr-libc/*/))
-   AVR_INC		:= ${AVR_ROOT}/avr
-   AVR			:= $(HOMEBREW_PREFIX)/bin/avr-
+   LFLAGS		+= -L$(HOMEBREW_PREFIX)/lib/
+   CFLAGS		+= $(LIBELF_INC)
+   AVR_ROOT		:= $(firstword $(wildcard $(ARDUINO_PREFIX)/*/))
+   AVR			:= $(ARDUINO_PREFIX)/bin/avr-
   endif
  endif
 else
